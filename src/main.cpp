@@ -1,9 +1,12 @@
 #include <Arduino.h>
+#include "FS.h"
+#include <LittleFS.h>
+
+#include <WiFi.h>
 #include <TFT_eSPI.h>
 #include <ESPConnect.h>
 #include <time.h>
 #include "esp_sntp.h"
-
 
 
 TFT_eSPI tft=TFT_eSPI();
@@ -13,13 +16,138 @@ struct tm tm;
 
 String wochentage[7]={"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
 #define MY_NTP_SERVER "at.pool.ntp.org"
+#define TFT_CAL_FILE "/settings/touchdata"
+#define REPEAT_CAL false
+#define FORMAT_LITTLEFS_IF_FAILED true
 
 // choose your time zone from this list
 // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 #define MY_TZ "CET-1CEST,M3.5.0/02,M10.5.0/03"
 time_t now;    // this is the epoch
 
+int backlight = 90;
+ 
 
+// converts the dBm to a range between 0 and 100%
+int8_t getWifiQuality() {
+  if (WiFi.status() != WL_CONNECTED){
+    return -1;
+  } else {
+    int32_t dbm = WiFi.RSSI();
+    if(dbm <= -100) {
+        return 0;
+    } else if(dbm >= -50) {
+        return 100;
+    } else {
+        return 2 * (dbm + 100);
+    }
+  }
+}
+void drawWifiQuality() {
+  int8_t quality = getWifiQuality();
+  Serial.println(String(quality));
+  tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
+  tft.drawRightString("  " + String(quality) + "%",305, 5, 1);
+  for (int8_t i = 0; i < 4; i++) {
+    tft.drawFastVLine(310 + 2 * i,4,8, TFT_LIGHTGREY);
+    for (int8_t j = 0; j < 2 * (i + 1); j++) {
+      if (quality > i * 25 || j == 0) {
+        tft.drawPixel(310 + 2 * i, 12 - j,TFT_BLACK);
+      }
+    }
+  }
+}
+
+void touch_calibrate()
+{
+  uint16_t calData[5];
+  uint8_t calDataOK = 0;
+
+  
+
+  // check if calibration file exists and size is correct
+  if (LittleFS.exists(TFT_CAL_FILE)) {
+    if (REPEAT_CAL)
+    {
+      // Delete if we want to re-calibrate
+      LittleFS.remove(TFT_CAL_FILE);
+    }
+    else
+    {
+      File f = LittleFS.open(TFT_CAL_FILE, "r");
+      if (f) {
+        if (f.readBytes((char *)calData, 14) == 14)
+          calDataOK = 1;
+        f.close();
+      }
+    }
+  }
+
+  if (calDataOK && !REPEAT_CAL) {
+    // calibration data valid
+    tft.setTouch(calData);
+  } else {
+    // data not valid so recalibrate
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(20, 0);
+    tft.setTextFont(2);
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+    tft.println("Touch corners as indicated");
+
+    tft.setTextFont(1);
+    tft.println();
+
+    if (REPEAT_CAL) {
+      tft.setTextColor(TFT_RED, TFT_BLACK);
+      tft.println("Set REPEAT_CAL to false to stop this running again!");
+    }
+
+    tft.calibrateTouch(calData, TFT_MAGENTA, TFT_BLACK, 15);
+
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.println("Calibration complete!");
+
+    // store data
+    File f = LittleFS.open(TFT_CAL_FILE, "w");
+    if (f) {
+      f.write((const unsigned char *)calData, 14);
+      f.close();
+    }
+  }
+}
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if(levels){
+                listDir(fs, file.path(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
 
 void showTime() {
  time(&now); // read the current time
@@ -27,8 +155,7 @@ void showTime() {
  String aktZeit = "";
  String aktDatum = "";
  aktDatum = wochentage[tm.tm_wday];
- aktDatum += ", " + (tm.tm_mday);
- aktDatum += "." + tm.tm_mon+1 + "." + tm.tm_year;
+ 
  Serial.print("year:");
  Serial.print(tm.tm_year + 1900); // years since 1900
  Serial.print("\tmonth:");
@@ -59,6 +186,9 @@ void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was s
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  ledcAttachPin(5, 0);
+  ledcSetup(0, 1000, 8);
+  ledcWrite(0, 255);
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
@@ -68,6 +198,13 @@ void setup() {
   tft.drawRoundRect(0,0,320,16,1,TFT_BLACK);
   tft.fillRoundRect(0, 224, 320, 240, 1, TFT_LIGHTGREY);
   tft.drawRoundRect(0,224,320,240,1,TFT_BLACK);
+
+  ledcWrite(0, 0);
+ 
+  //tft.setFreeFont(FF2); //select Free, Mono, Oblique, 12pt.
+  tft.drawString("Mono 12pt",70,110);//prints string at (70,110)
+ 
+  
 
   /* AutoConnect AP Configure SSID and password for Captive Portal */
   ESPConnect.autoConnect("ESPConfig");
@@ -84,10 +221,24 @@ void setup() {
   configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
   setenv("TZ", MY_TZ, 1); // Set environment variable with your time zone
   tzset();
+  tft.setTextColor(TFT_BLACK,TFT_LIGHTGREY);
+  tft.drawString("AZ-Touch-IP: ",10,5,1);
+  tft.drawString(WiFi.localIP().toString(),100,5,1);
+  // check file system exists
+  if (!LittleFS.begin()) {
+    Serial.println("Formatting file system");
+    LittleFS.format();
+    LittleFS.begin();
+  }
+  Serial.println("Informationen zum Dateisystem:");
+  Serial.printf("- Bytes total:   %ld\n", LittleFS.totalBytes());
+  Serial.printf("- Bytes genutzt: %ld\n\n", LittleFS.usedBytes());
+  listDir(LittleFS, "/", 3);
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  showTime();
-  delay(1000);
+  
+  
 }
