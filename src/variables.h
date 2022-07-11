@@ -14,3 +14,6 @@ String wochentage[7]={"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag",
 time_t now;    // this is the epoch
 
 int backlight = 90;
+hw_timer_t * timer1 = NULL;
+
+uint16_t t_x = 0, t_y = 0;

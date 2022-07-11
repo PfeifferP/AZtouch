@@ -48,3 +48,8 @@ void cronjob() {
   if ((cront4 + (cron_4 * 1000)) <= tmp) { cron4(); cront4 = millis(); }
   if ((cront5 + (cron_5 * 1000)) <= tmp) { cron5(); cront5 = millis(); }
 }
+
+void IRAM_ATTR timerISR(){
+  clearStatusBar();
+  timerAlarmDisable(timer1);
+}

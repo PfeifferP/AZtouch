@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "FS.h"
+#include <FS.h>
 #include <LittleFS.h>
 
 #include <WiFi.h>
@@ -141,12 +141,14 @@ void showTime() {
 
 void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was synchronized
 {
-  Serial.println(F("NTP time synched"));
+  setStatusBar(F("NTP time synched"));
 }
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  timer1 = timerBegin(0,80,true);
+  timerAttachInterrupt(timer1,timerISR,true);
   setupBrightnessControl();
   setBrightness(0);
   tft.init();
@@ -157,10 +159,9 @@ void setup() {
   tft.fillRoundRect(0, 0, 320, 16, 1, TFT_LIGHTGREY);
   tft.drawRoundRect(0,0,320,16,1,TFT_BLACK);
   // Draw StatusBar
-  tft.fillRoundRect(0, 224, 320, 240, 1, TFT_LIGHTGREY);
-  tft.drawRoundRect(0,224,320,240,1,TFT_BLACK);
+  clearStatusBar();
   
-  setBrightness(100);
+  
  
   //tft.setFreeFont(FF2); //select Free, Mono, Oblique, 12pt.
   tft.drawString("Mono 12pt",70,110);//prints string at (70,110)
@@ -195,11 +196,12 @@ void setup() {
   Serial.printf("- Bytes total:   %ld\n", LittleFS.totalBytes());
   Serial.printf("- Bytes genutzt: %ld\n\n", LittleFS.usedBytes());
   listDir(LittleFS, "/", 3);
-  
+  setBrightness(100);
+  setStatusBar("test Status:");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   cronjob();
-  
+  checkTouched();
 }
