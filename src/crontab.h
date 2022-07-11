@@ -49,7 +49,7 @@ void cronjob() {
   if ((cront5 + (cron_5 * 1000)) <= tmp) { cron5(); cront5 = millis(); }
 }
 
-void IRAM_ATTR timerISR(){
+void IRAM_ATTR timer1ISR(){
   clearStatusBar();
   timerAlarmDisable(timer1);
 }

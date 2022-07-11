@@ -36,7 +36,7 @@ void setBrightness(uint32_t newBrightness) {
 }
 
 void setupBrightnessControl() {
-  //pinMode(5, OUTPUT);
+  pinMode(5, OUTPUT);
   ledcSetup(0, 5000, 8); // 0-15, 5000, 8
   ledcAttachPin(5, 0); // TFT_BL, 0 - 15
 }
@@ -57,4 +57,9 @@ void checkTouched(){
   if(tft.getTouch(&t_x, &t_y)){
     tft.fillCircle(t_x, t_y, 2, TFT_SKYBLUE);
   }
+}
+
+void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was synchronized
+{
+  setStatusBar(F("NTP sychronisiert."));
 }

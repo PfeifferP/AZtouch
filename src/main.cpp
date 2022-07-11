@@ -19,6 +19,7 @@ AsyncWebServer server(80);
 
 
 
+
 void touch_calibrate()
 {
   uint16_t calData[5];
@@ -139,16 +140,13 @@ void showTime() {
 
 }
 
-void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was synchronized
-{
-  setStatusBar(F("NTP time synched"));
-}
+
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   timer1 = timerBegin(0,80,true);
-  timerAttachInterrupt(timer1,timerISR,true);
+  timerAttachInterrupt(timer1,timer1ISR,true);
   setupBrightnessControl();
   setBrightness(0);
   tft.init();
