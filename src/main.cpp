@@ -14,7 +14,7 @@ AsyncWebServer server(80);
 
 #include "variables.h"
 #include "myfunctions.h"
- 
+#include "crontab.h" 
 
 
 
@@ -147,20 +147,20 @@ void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was s
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  ledcAttachPin(5, 0);
-  ledcSetup(0, 1000, 8);
-  ledcWrite(0, 255);
+  setupBrightnessControl();
+  setBrightness(0);
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
   tft.setTextColor(TFT_BLACK,TFT_WHITE);
-  
+  // Draw TopBar
   tft.fillRoundRect(0, 0, 320, 16, 1, TFT_LIGHTGREY);
   tft.drawRoundRect(0,0,320,16,1,TFT_BLACK);
+  // Draw StatusBar
   tft.fillRoundRect(0, 224, 320, 240, 1, TFT_LIGHTGREY);
   tft.drawRoundRect(0,224,320,240,1,TFT_BLACK);
-
-  ledcWrite(0, 0);
+  
+  setBrightness(100);
  
   //tft.setFreeFont(FF2); //select Free, Mono, Oblique, 12pt.
   tft.drawString("Mono 12pt",70,110);//prints string at (70,110)
@@ -200,6 +200,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  
+  cronjob();
   
 }

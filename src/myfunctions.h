@@ -19,7 +19,6 @@ int8_t getWifiQuality() {
 
 void drawWifiQuality() {
   int8_t quality = getWifiQuality();
-  Serial.println(String(quality));
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
   tft.drawRightString("  " + String(quality) + "%",305, 5, 1);
   for (int8_t i = 0; i < 4; i++) {
@@ -30,4 +29,14 @@ void drawWifiQuality() {
       }
     }
   }
+}
+
+void setBrightness(uint32_t newBrightness) {
+  ledcWrite(0, map(newBrightness, 0, 100, 255, 0)); // 0-15, 0-255 (with 8 bit resolution);  255=totally dark;0=totally shiny
+}
+
+void setupBrightnessControl() {
+  pinMode(5, OUTPUT);
+  ledcSetup(0, 5000, 8); // 0-15, 5000, 8
+  ledcAttachPin(5, 0); // TFT_BL, 0 - 15
 }
