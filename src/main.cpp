@@ -12,51 +12,12 @@
 TFT_eSPI tft=TFT_eSPI();
 AsyncWebServer server(80);
 
-struct tm tm;
-
-String wochentage[7]={"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
-#define MY_NTP_SERVER "at.pool.ntp.org"
-#define TFT_CAL_FILE "/settings/touchdata"
-#define REPEAT_CAL false
-#define FORMAT_LITTLEFS_IF_FAILED true
-
-// choose your time zone from this list
-// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-#define MY_TZ "CET-1CEST,M3.5.0/02,M10.5.0/03"
-time_t now;    // this is the epoch
-
-int backlight = 90;
+#include "variables.h"
+#include "myfunctions.h"
  
 
-// converts the dBm to a range between 0 and 100%
-int8_t getWifiQuality() {
-  if (WiFi.status() != WL_CONNECTED){
-    return -1;
-  } else {
-    int32_t dbm = WiFi.RSSI();
-    if(dbm <= -100) {
-        return 0;
-    } else if(dbm >= -50) {
-        return 100;
-    } else {
-        return 2 * (dbm + 100);
-    }
-  }
-}
-void drawWifiQuality() {
-  int8_t quality = getWifiQuality();
-  Serial.println(String(quality));
-  tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
-  tft.drawRightString("  " + String(quality) + "%",305, 5, 1);
-  for (int8_t i = 0; i < 4; i++) {
-    tft.drawFastVLine(310 + 2 * i,4,8, TFT_LIGHTGREY);
-    for (int8_t j = 0; j < 2 * (i + 1); j++) {
-      if (quality > i * 25 || j == 0) {
-        tft.drawPixel(310 + 2 * i, 12 - j,TFT_BLACK);
-      }
-    }
-  }
-}
+
+
 
 void touch_calibrate()
 {
