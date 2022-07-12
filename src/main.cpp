@@ -145,10 +145,13 @@ void showTime() {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  // set timer interrupt clear statusbar
   timer1 = timerBegin(0,80,true);
   timerAttachInterrupt(timer1,timer1ISR,true);
+  // set backlightcontrol
   setupBrightnessControl();
   setBrightness(0);
+  
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
